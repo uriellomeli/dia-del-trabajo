@@ -1,0 +1,210 @@
+---
+title: "1ero de Mayo"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r libs}
+pacman::p_load(tidyverse, ggthemes, readxl, cowplot, magick, ggforce, ggtext, RColorBrewer, showtext, grid)
+
+font_add_google(name = 'Lato', "font")
+showtext_auto()
+```
+
+```{r upload}
+# Median weekly earnings of full-time wage and salary workers by union affiliation and selected characteristics - annual averages
+union <- read_excel("C:/Users/urlo2939/Documents/GitHub/1ero de mayo/cpsaat41.xlsx")
+union_ocup <- read_excel("C:/Users/urlo2939/Documents/GitHub/1ero de mayo/cpsaat43.xlsx")
+
+
+png <- magick::image_read(path = "~/GitHub/1ero de mayo/logo_puños.png")
+png2 <- magick::image_read(path = "~/GitHub/1ero de mayo/union_strong.png")
+
+img <- grid::rasterGrob(image = png, interpolate = T)
+img2 <- grid::rasterGrob(image = png2, interpolate = T)
+```
+
+```{r}
+union <- union %>% 
+  mutate(variable = paste0(characteristic, ", ", demo)) %>% 
+  pivot_longer(cols = 3:6, names_to = "union", values_to = "wage")
+
+colors <- c("#ffd28f", "#f0b64d", "#6876a4", "#0064ab", "#005083", "#c99f6e", "#9f8a89")
+  
+uniondiff <- union %>% 
+  filter(union %in% c("Members of unions", "Non-union")) %>% 
+  pivot_wider(names_from = union, values_from = wage) %>% 
+  rename(union = 'Members of unions', non_union = 'Non-union') %>% 
+  mutate(color = if_else(characteristic == "Total", "#ffd28f", 
+                        if_else(characteristic == "Men", "#f0b64d",
+                                if_else(characteristic == "Women", "#6876a4",
+                                        if_else(characteristic == "White", "#0064ab",
+                                                if_else(characteristic == "Black", "#005083",
+                                                        if_else(characteristic == "Asian", "#c99f6e",
+                                                                if_else(characteristic == "Hispanic or Latino", "#9f8a89", NA_character_)))))))) %>% 
+  group_by(year, variable, color) %>% 
+  summarise(wage_diff = union - non_union) %>% 
+  ungroup() %>% 
+  mutate(desc = if_else(wage_diff > 0, paste0("$", wage_diff), paste0("-$", abs(wage_diff))))
+```
+
+```{r, fig.height=11, fig.width=12}
+uniondiff %>% 
+  filter(year %in% c(2021)) %>% 
+  ggplot(aes(x = wage_diff, y = reorder(variable, wage_diff))) +
+  geom_vline(xintercept = 0, color = "gray40", size = 1.5) +
+  geom_mark_rect(aes(label = variable, color = color, filter = str_starts(variable, c("Hispanic or Latino, ")), description = desc), 
+                 label.colour = "#0064ab", label.fill = "transparent", label.fontsize = 10, label.buffer = unit(40, 'mm'), 
+                 con.cap = 0, con.colour = "#0064ab", con.border = "none",
+                 expand = unit(3, "mm"), radius = unit(1, "mm"), show.legend = F) +
+  geom_mark_rect(aes(label = variable, color = color, filter = str_starts(variable, c("Black, ")), description = desc), 
+                 label.colour = "#c99f6e", label.fill = "transparent", label.fontsize = 10, label.buffer = unit(55, 'mm'),
+                 con.cap = 0, con.colour = "#c99f6e", con.border = "none",
+                 expand = unit(3, "mm"), radius = unit(1, "mm"), show.legend = F) +
+  geom_mark_rect(aes(label = variable, color = color, filter = str_starts(variable, c("Total, 16 years")), description = desc), 
+                 label.colour = "#6876a4", label.fill = "transparent", label.fontsize = 10, label.buffer = unit(5, 'mm'),
+                 con.cap = 0, con.colour = "#6876a4", con.border = "none",
+                 expand = unit(3, "mm"), radius = unit(1, "mm"), show.legend = F) +
+  geom_point(aes(size = wage_diff, color = color), alpha = 0.9, show.legend = F, shape = 21, fill = "white", stroke = 4) +
+  scale_color_manual(values = colors) +
+  scale_x_continuous(limits = c(-200, 300), breaks = seq(-200, 300, 50), labels = scales::dollar_format()) +
+  labs(x = "Difference in median weekly earnings", 
+       y = "", 
+       title = "L a b o u r   D a y\n",
+       subtitle = "\nShould I join a UNION? Since 2012,  the median weekly earnings of full-time wage and salary workers have been larger for Members of Unions than for Non-union workers. 2021 data shows that Hispanic or Latino workers who are members of a union earn an average of $277 more than those who are not members of a union.",
+       caption = "\n\n\n\n\nSource: US Bureau of Labor Statistics. Current Population Survey 2022.\nData refer to members of a labor union or an employee association similar to a union and to workers who are neither members of a union nor represented by a union on their job.\nPersons whose ethnicity is identified as Hispanic or Latino may be of any race. Data refer to the sole or principal job of full-time wage and salary workers.\nAll self-employed workers are excluded, both those with incorporated businesses and those with unincorporated businesses.\nUpdated population controls are introduced annually with the release of January data.") +
+  annotation_custom(grob = img2, 
+                    ymin = 31, ymax = 40, 
+                    xmin = -360, xmax = -250) +
+  draw_text(text = "On this side, workers that are members of unions\nearn on average more than non-union workers", 
+            x = 220, y = 3, size = 12, color = "gray40", family = "font") +
+  coord_cartesian(clip = "off") +
+  theme_minimal() +
+  theme(panel.grid = element_blank(),
+        plot.title.position = "panel", 
+        plot.title = element_textbox_simple(size = 13, lineheight = 1.5, 
+                                            padding = margin(3, 3, 3, 3), 
+                                            margin = margin(0, 0, 0, 0), 
+                                            fill = "cornsilk", halign = 0.5, 
+                                            face = "bold"), 
+        plot.subtitle = element_textbox_simple(size = 12, lineheight = 1, 
+                                            padding = margin(3, 3, 3, 3), 
+                                            margin = margin(2, 0, 10, 0), 
+                                            fill = "cornsilk", halign = 0.5),
+        plot.margin = margin(40, 45, 45, 45),
+        plot.caption.position = "plot",
+        plot.caption = element_text(hjust = 0, color = "gray50", size = 8),
+        axis.text = element_text(size = 12, face = "bold"),
+        axis.title.x = element_text(hjust = 0.4, margin = margin(t = 25), size = 14),
+        text = element_text(family = "font")) -> plot
+
+qr <- "https://www.marxists.org/english.htm"
+
+plot + geom_qr(aes(label = qr, x = -150, y = 25), size = 1.3) +
+  annotate("curve", x = -110, xend = -165, y = 17, yend = 21, color = "gray60", curvature = -.45, alpha = 0.9, 
+           arrow = arrow(angle = 15, length = unit(3.5, "mm"), type = "closed")) +
+  annotate("text", x = -109, y = 17, label = "more info here", color = "gray60", size = 4, hjust = 0, vjust = 0.5)
+
+
+ggsave(filename = "labour_day.png", plot = last_plot(), device = "png", width = 16, height = 15, units = "in", dpi = "screen")
+```
+
+```{r emoji, fig.height=11, fig.width=12}
+uniondiff %>% 
+  filter(year %in% c(2021)) %>% 
+  ggplot(aes(x = wage_diff, y = reorder(variable, wage_diff))) +
+  geom_vline(xintercept = 0, color = "gray40", size = 1.5) +
+  geom_mark_rect(aes(label = variable, color = color, filter = str_starts(variable, c("Hispanic or Latino, ")), description = desc), 
+                 label.colour = "#0064ab", label.fill = "transparent", label.fontsize = 10, label.buffer = unit(40, 'mm'), 
+                 con.cap = 0, con.colour = "#0064ab", con.border = "none",
+                 expand = unit(3, "mm"), radius = unit(1, "mm"), show.legend = F) +
+  geom_mark_rect(aes(label = variable, color = color, filter = str_starts(variable, c("Black, ")), description = desc), 
+                 label.colour = "#c99f6e", label.fill = "transparent", label.fontsize = 10, label.buffer = unit(55, 'mm'),
+                 con.cap = 0, con.colour = "#c99f6e", con.border = "none",
+                 expand = unit(3, "mm"), radius = unit(1, "mm"), show.legend = F) +
+  geom_mark_rect(aes(label = variable, color = color, filter = str_starts(variable, c("Total, 16 years")), description = desc), 
+                 label.colour = "#6876a4", label.fill = "transparent", label.fontsize = 10, label.buffer = unit(5, 'mm'),
+                 con.cap = 0, con.colour = "#6876a4", con.border = "none",
+                 expand = unit(3, "mm"), radius = unit(1, "mm"), show.legend = F) +
+  ggimage::geom_emoji(aes(image = ifelse(wage_diff > 0, '1f600', '1f622'))) +
+  scale_x_continuous(limits = c(-200, 300), breaks = seq(-200, 300, 50), labels = scales::dollar_format()) +
+  labs(x = "Difference in median weekly earnings", 
+       y = "", 
+       title = "L a b o u r   D a y",
+       subtitle = "Should I join a UNION? Since 2012,  the median weekly earnings of full-time wage and salary workers have been larger for Members of Unions than for Non-union workers. 2021 data shows that Hispanic or Latino workers who are members of a union earn an average of $277 more than those who are not members of a union.",
+       caption = "\n\n\n\n\nSource: US Bureau of Labor Statistics. Current Population Survey 2022.\nData refer to members of a labor union or an employee association similar to a union and to workers who are neither members of a union nor represented by a union on their job.\nPersons whose ethnicity is identified as Hispanic or Latino may be of any race. Data refer to the sole or principal job of full-time wage and salary workers.\nAll self-employed workers are excluded, both those with incorporated businesses and those with unincorporated businesses.\nUpdated population controls are introduced annually with the release of January data.") +
+  annotation_custom(grob = img2, 
+                    ymin = 31, ymax = 40, 
+                    xmin = -360, xmax = -250) +
+  draw_text(text = "On this side, workers that are members of unions\nearn on average more than non-union workers", 
+            x = 220, y = 3, size = 12, color = "gray40", family = "font") +
+  coord_cartesian(clip = "off") +
+  theme_minimal() +
+  theme(panel.grid = element_blank(),
+        plot.title.position = "panel", 
+        plot.title = element_textbox_simple(size = 13, lineheight = 1.5, 
+                                            padding = margin(3, 3, 3, 3), 
+                                            margin = margin(0, 0, 0, 0), 
+                                            fill = "cornsilk", halign = 0.5, 
+                                            face = "bold"), 
+        plot.subtitle = element_textbox_simple(size = 12, lineheight = 1, 
+                                            padding = margin(3, 3, 3, 3), 
+                                            margin = margin(2, 0, 10, 0), 
+                                            fill = "cornsilk", halign = 0.5),
+        plot.margin = margin(40, 45, 45, 45),
+        plot.caption.position = "plot",
+        plot.caption = element_text(hjust = 0, color = "gray50", size = 8),
+        axis.text = element_text(size = 12, face = "bold"),
+        axis.title.x = element_text(hjust = 0.4, margin = margin(t = 25), size = 14),
+        text = element_text(family = "font")) -> plot
+
+
+plot + geom_qr(aes(label = qr, x = -150, y = 25), size = 1.3) +
+  annotate("curve", x = -110, xend = -165, y = 17, yend = 21, color = "gray60", curvature = -.45, alpha = 0.9, 
+           arrow = arrow(angle = 15, length = unit(3.5, "mm"), type = "closed")) +
+  annotate("text", x = -109, y = 17, label = "more info here", color = "gray60", size = 4, hjust = 0, vjust = 0.5)
+
+ggsave(filename = "labour_day.png", plot = last_plot(), device = "png", width = 16, height = 15, units = "in", dpi = "screen")
+```
+
+```{r}
+union %>% 
+  filter(variable == "Total, 16 years and over") %>% 
+  ggplot(aes(x = year, y = wage)) +
+  geom_line(aes(group = union, color = union), size = 2) +
+  geom_text(data = union %>% filter(year == last(year), variable == "Total, 16 years and over"), 
+                                    aes(color = union, label = union), fontface = "bold", size = 4, hjust = -0.04) +
+  scale_x_continuous(breaks = seq(2012, 2021, by = 1), expand = c(0.03, 0, 0, 1.2)) +
+  scale_y_continuous(limits = c(700, 1200), breaks = seq(500, 2200, by = 100)) +
+  scale_color_wsj() +
+  labs(x = "", y = "Average weekly earnings", 
+       title = "Should I join a Union?", subtitle = "Total, 16 years and over") +
+  theme_minimal() + 
+  theme(legend.position = "none",
+        panel.grid = element_blank(),
+        text = element_text(family = "russo")) +
+  coord_cartesian(clip = "off")
+
+union %>% 
+  filter(variable == "White, Both") %>% 
+  ggplot(aes(x = year, y = wage)) +
+  geom_line(aes(group = union, color = union), size = 2) +
+  geom_line(data = union %>% filter(variable == "Black, Both"), aes(group = union, color = union), size = 2) +
+  geom_text(data = union %>% filter(year == last(year), variable == "White, Both"), 
+                                    aes(color = union, label = union), fontface = "bold", size = 4, hjust = -0.04) +
+  scale_x_continuous(breaks = seq(2012, 2021, by = 1), expand = c(0.03, 0, 0, 1.2)) +
+  scale_y_continuous(limits = c(500, 1200), breaks = seq(500, 2200, by = 100)) +
+  scale_color_wsj() +
+  labs(x = "", y = "Average weekly earnings", 
+       title = "Should I join a Union?", subtitle = "White, Both") +
+  theme_minimal() + 
+  theme(legend.position = "none",
+        panel.grid = element_blank(),
+        text = element_text(family = "russo"))
+```
+
+
+
