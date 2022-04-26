@@ -221,7 +221,6 @@ ggdraw() +
   draw_text("Source: US Bureau of Labor Statistics. Current Population Survey 2022.\nData refer to members of a labor union or an employee association similar to a union and to workers who are neither members of a union nor represented by a union on their job. Persons whose ethnicity is\nidentified as Hispanic or Latino may be of any race. Data refer to the sole or principal job of full-time wage and salary workers. All self-employed workers are excluded, both those with incorporated businesses\nand those with unincorporated businesses. Updated population controls are introduced annually with the release of January data. Effective with January 2020 data, occupations reflect the introduction of the\n2018 Census occupational classification system, derived from the 2018 Standard Occupational Classification (SOC).", size = 8, x = 0.01, y = 0.5, hjust = 0, color = "gray50", family = "font") -> caption_plot
 ```
 
-
 ```{r, fig.height=23, fig.width=12}
 labour_day <- plot_grid(top_plot,
                         p1, 
