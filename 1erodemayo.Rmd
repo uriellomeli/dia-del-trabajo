@@ -264,7 +264,6 @@ plot_grid(extra_plot, NULL, caption_plot, nrow = 3, rel_heights = c(1, 0.5, 1))
 # Author
 ggdraw() +
   draw_text("github.com/uriellomeli", size = 9, x = 0.95, y = 0.5, hjust = 1, color = "gray80", family = "roboto") +
-  #draw_text("ig @iguwuana", size = 10, x = 0.95, y = 0.20, hjust = 1, color = "gray70", family = "font") +
   draw_text("ig @uriellomeli", size = 9, x = 0.95, y = 0.3, hjust = 1, color = "gray80", family = "roboto") -> ids_plot
 
 # Bottom
